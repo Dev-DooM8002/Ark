@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+# Limpiar y crear carpetas
+rm -rf bin/ build/
+mkdir -p bin/ build/
+
+# Compilar el compilador (Ark Compiler)
+echo "Compilando Ark..."
+g++ src/main.cpp src/Lexer.cpp src/Parser.cpp src/Generator.cpp -o build/ark
+
+# Nota: Ya no ejecutamos ark aqui directamente porque necesita un archivo.
+echo "Ejecutando ARK sobre examples/code.ark"
+./build/ark examples/code.ark

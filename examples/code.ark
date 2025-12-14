@@ -1,0 +1,13 @@
+.start
+    var x: 11;
+
+    pnl("Hello word!!!");
+
+    if (x == 10):
+        pnl("x es 10");
+    elif (x > 5):
+        pnl("x es mayor a 5");
+    else:
+        pnl("ptm no se cumple ninguna condicion");
+    .end
+.end
