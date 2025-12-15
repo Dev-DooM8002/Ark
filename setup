@@ -1,26 +1,33 @@
 #!/bin/bash
 
-# Parar si hay errores
+# Detener si hay errores
 set -e
 
-echo "--- LIMPIEZA PROFUNDA ---"
+echo "--- SETUP ARK ---"
+
+# 1. Limpieza
+echo "[Setup] Limpiando directorios..."
 rm -rf bin build
 mkdir -p bin build
 
-echo "1. Compilando el Compilador (C++)..."
+# 2. Compilar el propio compilador Ark
+echo "[Setup] Compilando Ark (C++)..."
 g++ -std=c++17 src/*.cpp -o build/ark
 
-echo "2. Ejecutando Ark sobre examples/code.ark..."
+# 3. Usar Ark para compilar el ejemplo
+# (Aqui main.cpp se encarga de llamar a NASM y LD)
+echo "[Setup] Ejecutando Ark sobre examples/code.ark..."
 ./build/ark examples/code.ark
 
-echo "3. Ensamblando con NASM..."
-nasm -f elf64 bin/output.asm -o bin/output.o
-
-echo "4. Linkeando..."
-ld bin/output.o -o bin/output
-
-echo "--- EJECUTANDO PROGRAMA FINAL ---"
-echo "---------------------------------"
-./bin/output
-echo ""
-echo "---------------------------------"
+# 4. Si todo salio bien, correr el programa final
+if [ -f "bin/output" ]; then
+    echo ""
+    echo "--- EJECUTANDO PROGRAMA DE USUARIO ---"
+    echo "--------------------------------------"
+    ./bin/output
+    echo ""
+    echo "--------------------------------------"
+else
+    echo "[Setup] Error: No se encontro el ejecutable final."
+    exit 1
+fi

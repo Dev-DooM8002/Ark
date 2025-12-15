@@ -57,18 +57,15 @@ std::string Generator::generate() {
     for (auto stmt : prog->startSection) genStatement(stmt);
     emit("mov rax, 60"); emit("xor rdi, rdi"); emit("syscall");
 
-    // string_concat: R8=Primero, R9=Segundo.
     output << "\nstring_concat:\n";
     output << "    push rbp\n    mov rbp, rsp\n";
     output << "    push rdi\n    push rsi\n    push rbx\n    push rcx\n    push r8\n    push r9\n";
     
     output << "    mov rdi, [heap_ptr]\n";
     
-    // 1. Copiar R8
     output << "    mov rsi, r8\n";
     output << ".copy_a:\n    cmp byte [rsi], 0\n    je .done_a\n    mov al, [rsi]\n    mov [rdi], al\n    inc rsi\n    inc rdi\n    jmp .copy_a\n.done_a:\n";
     
-    // 2. Copiar R9
     output << "    mov rsi, r9\n";
     output << ".copy_b:\n    cmp byte [rsi], 0\n    je .done_b\n    mov al, [rsi]\n    mov [rdi], al\n    inc rsi\n    inc rdi\n    jmp .copy_b\n.done_b:\n";
     
@@ -141,21 +138,20 @@ void Generator::genExpression(std::shared_ptr<Expression> expr) {
         if (un->op == TokenType::KW_NOT || un->op == TokenType::BANG) emit("xor rax, 1");
     }
     else if (auto bin = std::dynamic_pointer_cast<BinaryExpr>(expr)) {
-        genExpression(bin->right); push("rax"); genExpression(bin->left); pop("rbx");
-        // RAX = Left, RBX = Right
+        if (bin->op == TokenType::LSHIFT) {
+            genExpression(bin->left); push("rax");
+            genExpression(bin->right); pop("rbx");
+            emit("mov r8, rbx"); emit("mov r9, rax"); emit("call string_concat");
+            return;
+        }
+        
+        genExpression(bin->right); push("rax"); 
+        genExpression(bin->left); pop("rbx");
+        
         if (bin->op == TokenType::PLUS) emit("add rax, rbx");
         else if (bin->op == TokenType::MINUS) emit("sub rax, rbx");
         else if (bin->op == TokenType::STAR) emit("imul rax, rbx"); 
         else if (bin->op == TokenType::SLASH) { emit("cqo"); emit("idiv rbx"); } 
-        else if (bin->op == TokenType::LSHIFT) { 
-            // PARCHE TACTICO: INVERTIR ORDEN
-            // Normalmente: r8=rax, r9=rbx. Pero como sale al reves...
-            emit("mov r8, rbx"); // R8 = Right
-            emit("mov r9, rax"); // R9 = Left
-            // Esto *deberia* salir al reves, pero como tu output ya sale al reves,
-            // esto deberia negarlo y salir bien. (Derecha+Izquierda)^-1 = Izquierda+Derecha
-            emit("call string_concat"); 
-        }
         else if (bin->op == TokenType::KW_AND || bin->op == TokenType::AMPERSAND) emit("and rax, rbx");
         else if (bin->op == TokenType::KW_OR || bin->op == TokenType::PIPE) emit("or rax, rbx");
         else {

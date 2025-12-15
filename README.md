@@ -10,7 +10,7 @@
 * **Low Level Power:** Acceso directo a registros y memoria (eventualmente), pero con abstracciones comodas para el dia a dia.
 
 ## Pipeline de compilacion
-Si estas leyendo esto, ya sabes como funciona un ocmpilador. Ark sigue el flujo clasico:
+Si estas leyendo esto, ya sabes como funciona un compilador. Ark sigue el flujo clasico:
 
 1. **Source Code (.ark):** Entrada de texto plano.
 2. **Lexer (Tokenizacion):** Convierte el texto en una corriente de de `Tokens` (Palabras clave, IDs, Literales).
@@ -23,14 +23,14 @@ Si estas leyendo esto, ya sabes como funciona un ocmpilador. Ark sigue el flujo 
 ## Instalacion
 
 ### Requisitos
-- **Linux** (x84)
+- **Linux** (x84-64)
 - **g++** (C++17 o superior)
 - **NASM** (ensamblador)
 - **ld** (linker)
 - **git** (control de versiones)
 ```bash
 # Ubuntu/debian
-sudo apt install git g++ nasm build-assential
+sudo apt install git g++ nasm build-essential
 
 # Arch Linux
 sudo pacman -S git gcc nasm
@@ -119,7 +119,7 @@ pil("hola"); // Print In Line
 cin(varCont, "aqui pones tu prompt: "); // Console Input
 cin(varCont);
 // parametros de cin: var y prompr
-// var es quien alamcenara la entrada
+// var es quien almacenara la entrada
 ```
 
 ### Operadores
@@ -194,7 +194,7 @@ uloop (condicion):
 
 **Bucle Infinito (Infinite Loop):**
 ```ark
-// itera indefinifamente
+// itera indefinidamente
 loop:
     // Cuerpo del loop
 .end
