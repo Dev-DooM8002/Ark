@@ -2,6 +2,13 @@
 #include "AST.h"
 #include <sstream>
 #include <map>
+#include <vector>
+
+// Estructura para saber que onda con cada variable
+struct VarInfo {
+    int offset;      // Donde vive en el stack (rbp - offset)
+    std::string type; // "int" o "str"
+};
 
 class Generator {
 public:
@@ -13,15 +20,26 @@ private:
     std::shared_ptr<Program> prog;
     std::stringstream output;
     
-    std::map<std::string, int> localVars;
+    // Mapa actualizado: Nombre -> Info (Offset + Tipo)
+    std::map<std::string, VarInfo> localVars;
+    
     int stackOffset = 0; 
     int stringCount = 0;
-    int labelCounter = 0; // Para etiquetas IF
+    int labelCounter = 0; 
+
+    std::vector<std::pair<std::string, std::string>> loopStack;
+    std::vector<std::pair<std::string, std::string>> stringLiterals;
 
     void emit(std::string code);
     void push(std::string reg);
     void pop(std::string reg);
 
+    void collectStrings(std::shared_ptr<Statement> stmt);
+    void collectStringsFromExpr(std::shared_ptr<Expression> expr);
+
     void genStatement(std::shared_ptr<Statement> stmt);
     void genExpression(std::shared_ptr<Expression> expr);
+
+    // NUEVO: El cerebro que adivina tipos
+    std::string inferType(std::shared_ptr<Expression> expr);
 };

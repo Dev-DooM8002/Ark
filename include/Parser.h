@@ -19,20 +19,27 @@ private:
     Token peek(int offset = 0) const;
     Token advance();
     bool match(TokenType type);
-    bool check(TokenType type); // Nuevo helper para checar sin consumir
+    bool check(TokenType type); 
     Token consume(TokenType type, std::string errorMsg);
 
     void parseDataSection(std::shared_ptr<Program> prog);
     void parseStartSection(std::shared_ptr<Program> prog);
     
-    // Ahora recibe una lista de tokens que marcan el final del bloque
     std::shared_ptr<Block> parseBlock(const std::vector<TokenType>& terminators); 
 
     std::shared_ptr<Statement> statement();
     std::shared_ptr<Statement> varDeclaration();
     std::shared_ptr<Statement> assignmentOrExpression();
 
-    std::shared_ptr<Expression> expression();
-    std::shared_ptr<Expression> term();
-    std::shared_ptr<Expression> primary();
+    // --- JERARQUIA DE EXPRESIONES (PEMDAS) ---
+    std::shared_ptr<Expression> expression();   // logicOr
+    std::shared_ptr<Expression> logicOr();      // ||
+    std::shared_ptr<Expression> logicAnd();     // &&
+    std::shared_ptr<Expression> equality();     // == !=
+    std::shared_ptr<Expression> comparison();   // < > <= >=
+    std::shared_ptr<Expression> concat();       // <<
+    std::shared_ptr<Expression> term();         // + -
+    std::shared_ptr<Expression> factor();       // * /
+    std::shared_ptr<Expression> unary();        // ! -
+    std::shared_ptr<Expression> primary();      // literal, id, (expr)
 };

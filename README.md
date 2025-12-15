@@ -1,203 +1,204 @@
-Name:
-    Ark
-Ext:
-    .ark
+# Ark Programming Language
 
-Pipeline:
-    1. Lexer (Tokenizador):
-        Agarra el codigo fuente (Texto plano)
-        y lo parte en pedasos con sisgnificado (Tokens)
-            * Ejemplo:
-                Input: var x = 10
-                output: [keyword_var, id(x), op(=), int(10), semicolon(;)]
-    
-    2. Pareser (Analizador sinstactico):
-        *Gramatica: conjunto de reglas q establesen como se combinan los simbolos.
-        Agarra esos tokens y revisa q tengan sentido gramatical 
-        y contruye un AST (Abstract syntax tree)
-            * Ejemplo:
-                input: [keyword_var, id(x), op(=), int(10), semicolon(;)]
-                output: VarDec
-                        |--Id("x")
-                        |--Int(10)
-    
-    3. Analisis semantico:
-        Revisa q los tipos coincidan (la menos de q el lenguaje lo permita)
-        y que las variables existan
-            *Ejemplo:
-                text + 10: ERROR
-                varUndifined + x: ERROR
+**Ark** es un lenguaje de programacion compilado, de tipado hibrido (inferido estatico + explicito), diseñado desde 0 en C++. Su objetivo es ser la mera vrg, con una sintaxis limpia, moderna e intuitiva con la potencia de C++ y asm puro (**x86-64 NASM**).
 
-                10 + 10: CORRECT
-                x + x: CORRECT
+---
 
-    * Opcional:
-        1. Generador de codigo Intermedio (IR)
-        2. Optimizaciones (sobre IR)
+## Vision y Filosofia
+* **Sintaxis Limpia:** Bloques definidos por identacion o estructura logica, sin abuso de llaves `{}` ni punto y coma obligatorios en cada respiro.
+* **Performance Real:** Compila directamente a codigo maquina nativo (ELF64), sin maquinas virtuales ni interpretes intermedios.
+* **Low Level Power:** Acceso directo a registros y memoria (eventualmente), pero con abstracciones comodas para el dia a dia.
 
-    4. Generador de codigo (El backend):
-        Generar codigo ASM (NASM) directamente, escribirlo en un .asm
-        y luego ensamblarlo y linkearlo
-            Output:
-                Ejecutable
+## Pipeline de compilacion
+Si estas leyendo esto, ya sabes como funciona un ocmpilador. Ark sigue el flujo clasico:
 
-    5. Ejecutable:
-        no ahi mucho q decir de este.
-        solo ejecutalo y ve la magiiiaaaaaaaa :)
+1. **Source Code (.ark):** Entrada de texto plano.
+2. **Lexer (Tokenizacion):** Convierte el texto en una corriente de de `Tokens` (Palabras clave, IDs, Literales).
+3. **Parcer (AST):** Analiza la gramatica y construye un Arbol de Sintaxis Abstracta (AST) jerarquico.
+4. **Code Generator (Backend):** Recorre el AST y emite instrucciones ensablador **NASM (x86-64)**.
+5. **Assembler & Linker:** Usa `nasm` y `ld` para generar el binario ejecutable final.
 
+---
 
+## Instalacion
 
-Ontologia:
-    1. Tipado ??:
-        -Custom:
-            De q va este tipado custom ??
-            Este tipado sera 'hyper-dinamico'
-            contara con:
-                Inferencia de tipos. (deteccion automatica, x parte del compilador)
-                Tipo estatico explicito. (declarar con tipo explicitamente)
-            Ejemplos:
-                x = 100: Inferencia de tipos
-                int x = 1: tipo estatico explicito
+### Requisitos
+- **Linux** (x84)
+- **g++** (C++17 o superior)
+- **NASM** (ensamblador)
+- **ld** (linker)
+- **git** (control de versiones)
+```bash
+# Ubuntu/debian
+sudo apt install git g++ nasm build-assential
 
-    2. Paradigma ??:
-        Todos :)
+# Arch Linux
+sudo pacman -S git gcc nasm
+```
 
-    3. Compilado o interpretado ??:
-        Hibrido :)
+### Compilar compilador Ark
+```bash
+git clone https://github.com/Dev-DooM8002/Ark.git
+cd Ark
+chmod +x setup
+./setup
+sudo mv build/ark /usr/bin
+cd ..
+rm -rf Ark
+```
 
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+---
 
-++ Ark Fase 1 ++
+## Uso
+```bash
+ark file.ark
+./file
+```
 
-Inferencia: Estatica
-Paradigma: Procedural
-Implementacion: Compilada
+El compilador genera:
+1. `output.asm` - codigo NASM
+2. `output.o` - objeto ensamblado
+2. `output` - ejecutable final
 
-Current Pipeline:
-    1. Lexer
-    2. Parser
-    3. Semantic Analysis
-    4. codegen (nasm)
+---
+
+## Sintaxis
+
+### Estructura basica
+```ark
+.data:
+    // Tus variables globales o
+    // inicializadas, desde el prinicipio
+    // AQUI 
+.sbox:
+    // Tus funciones y clases,
+    // AQUI
+
+.start: // entry point
+    // Tu codigo aqui
+.end(codigo de retorno aqui)
+```
 
 
+### Comentarios
+**Comentario In-Line:**
+```ark
+// Este es un comentario in-line 
+```
+**Comentario Multi-Line:**
+```ark
+<begin>
+    Este
+    Es un
+    Comentario
+    Multilinea.
+<end>
+```
 
-// Comentario en Ark
-// 1. ¿Cómo se declara una función main (punto de entrada)?
-// 2. ¿Cómo declaramos variables inferidas y explicitas?
-// 3. ¿Usamos llaves {}, identación (tipo Python) o palabras (begin/end)?
+### Variables
 
-Comentarion in-line:
-    // Este es un comentario in-line
+**Inferencia de tipos:**
+```ark
+var x: 42;          // int
+var name: "Ark";    // str
+var flag: true;     // bool
+```
 
-Comentarios multi-line:
-    <begin>
-        Este
-        es un
-        comentario
-        multi-linea
-    <end>
+**Tipos explicitos:**
+```ark
+var int age: 1000;
+var str lang: "Ark";
+var bool flag: false;
+```
 
-Estructura: mixto:
-    se usara delimitadores () para expresiones y [] para listas
-    se utilizara la palabra .end o end() si ahi ret-value o end code
-    e identacion estetica
+### Input / Output (I/O)
+```ark
+pnl("hola"); // Print New Line
+pil("hola"); // Print In Line
 
-Types (iniciales):
-    int
-    str
-    char
-    bool
+cin(varCont, "aqui pones tu prompt: "); // Console Input
+cin(varCont);
+// parametros de cin: var y prompr
+// var es quien alamcenara la entrada
+```
 
-Scopes:
-    global: valida en todas partes
-    local: valida solo dentro de su bloque
+### Operadores
 
-Varibles:
-    Declaracion de variables explicitas:
-        opciones de secuensias: keyword_var scope type name op_assign value semicolon
-        opciones de secuensias: keyword_var type name op_assign value semicolon
-        opciones de secuensias: scope type name op_assign value semicolon
-        opciones de secuensias: type name op_assign value semicolon
-            *Ejemplos:
-                var local int myVar: 32;
-                var int myVar: 32;
-                local int myVar: 32;
-                int myVar: 32;
+**Operadores Aritmeticos:**
+```ark
+// +,-,*,/
+```
+**Operadores de Comparacion:**
+```ark
+// ==,!=,<,>,<=,>=
+```
+**Operadores Logicos:**
+```ark
+// and,&,or,|,not,!
+```
+**Operador de concatenacion:**
+```ark
+// <<
+```
+**Operador de asignacion:**
+```ark
+// :
+```
 
-    Declaracion de variables inferidas:
-        opciones de secuensias: keyword_var scope name op_assign value semicolon
-        opciones de secuensias: keyword_var name op_assign value semicolon
-        opciones de secuensias: scope name op_assign value semicolon
-        opciones de secuensias: name op_assign value semicolon
-            *Ejemplos:
-                var local myVar: 32;
-                var myVar: 32;
-                local myVar: 32;
-                myVar: 32;
+### Estructuras de control
 
-Funciones:
-    Funciones sin retorno:
-        secuensia: keyword_fun name ( tipe(opcional): name ) : 
-            Code Block
-        .end
+**Expresion :**
+```ark
+if (condicional):
+    // Aqui va el cuerpo del if
+.end
+```
+**Expresion if/else:**
+```ark
+if (condicional):
+    // Aqui va el cuerpo del if
+else:
+    // aqui va el cuerpo del else
+.end
+```
+**Expresion if/elif/else:**
+```ark
+if (condicional):
+    // Aqui va el cuerpo del if
+elif (condicional):
+    // Aqui va el cuerpo del elif
+elif (condicional):
+    // Aqui va el cuerpo del elif
+else:
+    // aqui va el cuerpo del else
+.end
+```
 
-    Funciones con retorno:
-        secuensia: keyword_fun name ( tipe(opcional): name ) -> ret-type : 
-            Code Block
-        .end(ret-value)
+### Bucles
 
-Estructuras de control (condicionales):
-    Condicional if:
-        secuencia: keyword_if ( Condicion ):
-            Code Block
-        .end
+**Bucle condicional (While Loop):**
+```ark
+// Itera mientras la condicion sea verdadera
+loop (condicion):
+    // Aqui va el cuerpo del loop
+.end
+```
 
-    Condicional if/else:
-        secuencia: keyword_if ( Condicion ):
-            Code Block
-        secuencia: keyword_else :
-            Code Block
-        .end
+**Bucle condicional (Until Loop):**
+```ark
+// Itera hasta q la condicion sea verdadera
+uloop (condicion):
+    // Aqui va el cuerpo del uloop
+.end
+```
 
-    Condicional if/elif/else:
-        secuencia: keyword_if ( Condicion ):
-            Code Block
-        secuencia: keyword_elif ( condition ):
-            Code Block
-        secuencia: keyword_else :
-            Code Block
-        .end
-
-
-sintaxis principal del los archivos .ark:
-.data: ( lugar "Opcional, para declaracion de variables globales)
-    ejemplo:
-    var global string myStr: "Hola";
-    o
-    var global string myStr > "Hola";
-.sbox: ((sandbox guiño, guiño jaja) aqui ira todo lo externo al punto de entrada, como: funciones, clases y etc, etc)
-    fun myFun (int: y) -> int:
-        z: (y + 10)
-    .end(z)
-.start: (Declaracion de punto de entrada)
-    y: 8;
-    b: myFun(y)
-    pnl(b) // pnl: print new line print \n jajajaj
-.end(end code) (cierre de punto de entrada)
-
-
-
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
-
-
-Pasa a produccion en Fase 1:
-    (:) como operador de asignacion
-    como stintaxis de variable(explicito):
-        (keyword_var, type, id, assign, value, semicolon) 
-    stintaxis de variable(inferido):
-        (keyword_var, id, assign, value, semicolon) 
-    (<begin>/<end>) como comentarios multi-linea
+**Bucle Infinito (Infinite Loop):**
+```ark
+// itera indefinifamente
+loop:
+    // Cuerpo del loop
+.end
+```
+#### Controles de flujo
+* **break** Break rompe bucle.
+* **jump** Jump salta la iteracion actual dentro de un bucle.

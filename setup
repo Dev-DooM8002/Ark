@@ -1,13 +1,26 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-# Limpiar y crear carpetas
-rm -rf bin/ build/
-mkdir -p bin/ build/
+# Parar si hay errores
+set -e
 
-# Compilar el compilador (Ark Compiler)
-echo "Compilando Ark..."
-g++ src/main.cpp src/Lexer.cpp src/Parser.cpp src/Generator.cpp -o build/ark
+echo "--- LIMPIEZA PROFUNDA ---"
+rm -rf bin build
+mkdir -p bin build
 
-# Nota: Ya no ejecutamos ark aqui directamente porque necesita un archivo.
-echo "Ejecutando ARK sobre examples/code.ark"
+echo "1. Compilando el Compilador (C++)..."
+g++ -std=c++17 src/*.cpp -o build/ark
+
+echo "2. Ejecutando Ark sobre examples/code.ark..."
 ./build/ark examples/code.ark
+
+echo "3. Ensamblando con NASM..."
+nasm -f elf64 bin/output.asm -o bin/output.o
+
+echo "4. Linkeando..."
+ld bin/output.o -o bin/output
+
+echo "--- EJECUTANDO PROGRAMA FINAL ---"
+echo "---------------------------------"
+./bin/output
+echo ""
+echo "---------------------------------"
