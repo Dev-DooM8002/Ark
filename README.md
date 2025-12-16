@@ -202,3 +202,26 @@ loop:
 #### Controles de flujo
 * **break** Break rompe bucle.
 * **jump** Jump salta la iteracion actual dentro de un bucle.
+
+
+### Funciones
+
+**Funciones Siples:**
+```ark
+// funcion para operaciones simples
+fn name(parametros): operacion;
+```
+
+**Funciones sin Retorno:**
+```ark
+fn name (Parametros):
+    // Aqui va el cuerpo de la funcion
+.end
+```
+
+**Funciones con retono:**
+```ark
+fn name (parametros) -> ret-type:
+    // Aqui va el cuerpo de la funcion
+.end(ret)
+```

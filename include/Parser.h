@@ -16,6 +16,7 @@ private:
     std::vector<Token> tokens;
     size_t pos;
 
+    // utilidades
     Token peek(int offset = 0) const;
     Token advance();
     bool match(TokenType type);
@@ -27,6 +28,7 @@ private:
     
     std::shared_ptr<Block> parseBlock(const std::vector<TokenType>& terminators); 
 
+    // Nodos
     std::shared_ptr<Statement> statement();
     std::shared_ptr<Statement> varDeclaration();
     std::shared_ptr<Statement> assignmentOrExpression();

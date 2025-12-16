@@ -1,26 +1,3 @@
 .start
-    pnl("--- PRUEBA FASE 4.5: OPERADORES ---");
-    
-    // Matematicas
-    var a: 10;
-    var b: 2;
-    pil("10 * 2 = "); pnl(a * b);
-    pil("10 / 2 = "); pnl(a / b);
-
-    // Comparacion
-    if (a >= 10 and b <= 2):
-        pnl("Check: 10 >= 10 AND 2 <= 2 es VERDAD");
-    .end
-
-    // Concatenacion
-    pnl("--- CONCATENACION ---");
-    var nombre: "";
-    cin(nombre, "Tu nombre: ");
-    
-    // Magia de <<
-    var saludo: "Hola " << nombre << ", bienvenido a Ark!";
-    pnl(saludo);
-    
-    // Concatenar en pnl directo
-    pnl("Adios " << nombre << "!");
+    pnl("Hola como estas ??")
 .end
