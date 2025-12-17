@@ -1,8 +1,4 @@
-.box:
-    fn mult(a, b): a * b;
-
 .start:
-
-    res: mult(9, 8);
-    pnl(res)
+    str nombre;
+    pnl(nombre);
 .end

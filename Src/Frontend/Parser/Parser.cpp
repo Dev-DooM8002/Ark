@@ -71,17 +71,10 @@ std::shared_ptr<Statement> Parser::varDeclaration() {
 
     declaredVariables.insert(n.value);
 
-    std::shared_ptr<Expression> initVal;
+    std::shared_ptr<Expression> initVal = nullptr;
 
     if (match(TokenType::COLON)) {
         initVal = expression();
-    } else {
-        if (typeStr == "str") {
-            initVal = std::make_shared<StringLiteral>("");
-        } else {
-            if (typeStr.empty()) typeStr = "int";
-            initVal = std::make_shared<NumberLiteral>(0);
-        }
     }
     
     match(TokenType::SEMICOLON);

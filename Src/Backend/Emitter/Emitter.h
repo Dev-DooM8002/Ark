@@ -4,10 +4,9 @@
 #include <map>
 #include <vector>
 
-// Estructura para saber que onda con cada variable
 struct VarInfo {
-    int offset;      // Donde vive en el stack (rbp - offset)
-    std::string type; // "int" o "str"
+    int offset;
+    std::string type;
 };
 
 class Generator {
@@ -20,11 +19,11 @@ private:
     std::shared_ptr<Program> prog;
     std::stringstream output;
     
-    // Mapa actualizado: Nombre -> Info (Offset + Tipo)
     std::map<std::string, VarInfo> localVars;
     std::map<std::string, std::string> globalVars;
     
-    int stackOffset = 0; 
+    int stackOffset = 0;        // Para variables permanentes
+    int tempStackDepth = 0;     // NUEVO: Para push/pop temporales
     int stringCount = 0;
     int labelCounter = 0; 
 
@@ -35,6 +34,8 @@ private:
     void push(std::string reg);
     void pop(std::string reg);
 
+    int calculateStackSize(const std::vector<std::shared_ptr<Statement>>& stmts);
+
     void collectStrings(std::shared_ptr<Statement> stmt);
     void collectStringsFromExpr(std::shared_ptr<Expression> expr);
 
@@ -44,7 +45,6 @@ private:
     void genFunctionDef(std::shared_ptr<FunctionDef> funct);
     void genFunctionCall(std::shared_ptr<FunctionCall> call);
 
-    // NUEVO: El cerebro que adivina tipos
     std::string inferType(std::shared_ptr<Expression> expr);
     std::map<std::string, int> currentFuncArgs;
 };
