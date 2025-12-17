@@ -4,7 +4,8 @@
 
 enum class TokenType {
     // Palabras Reservadas
-    KW_VAR, KW_FUN, KW_GLOBAL, KW_LOCAL,
+    KW_VAR, KW_FN,
+    KW_RETURN,
     KW_IF, KW_ELIF, KW_ELSE,
     KW_LOOP, KW_ULOOP, KW_BREAK, KW_JUMP,
     KW_PIL, KW_CIN,
@@ -16,7 +17,7 @@ enum class TokenType {
     TYPE_INT, TYPE_STR, TYPE_CHAR, TYPE_BOOL,
 
     // Secciones
-    SEC_DATA, SEC_SBOX, SEC_START, SEC_END,
+    SEC_DATA, SEC_BOX, SEC_START, SEC_END,
 
     // Literales / ID
     LIT_INT, LIT_STR, LIT_CHAR, ID,

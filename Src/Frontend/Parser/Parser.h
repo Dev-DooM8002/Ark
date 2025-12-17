@@ -1,8 +1,9 @@
 #pragma once
 #include <vector>
 #include <memory>
-#include "Token.h"
-#include "AST.h"
+#include <set>
+#include "../../../Includes/Token.h"
+#include "../../../Includes/AST.h"
 
 class Parser {
 public:
@@ -24,14 +25,20 @@ private:
     Token consume(TokenType type, std::string errorMsg);
 
     void parseDataSection(std::shared_ptr<Program> prog);
+    void parseBoxSection(std::shared_ptr<Program> prog);
     void parseStartSection(std::shared_ptr<Program> prog);
     
     std::shared_ptr<Block> parseBlock(const std::vector<TokenType>& terminators); 
+
+    std::set<std::string> declaredVariables;
 
     // Nodos
     std::shared_ptr<Statement> statement();
     std::shared_ptr<Statement> varDeclaration();
     std::shared_ptr<Statement> assignmentOrExpression();
+    std::shared_ptr<Statement> functionDefinition();
+
+    std::vector<std::shared_ptr<Expression>> parseArguments();
 
     // --- JERARQUIA DE EXPRESIONES (PEMDAS) ---
     std::shared_ptr<Expression> expression();   // logicOr

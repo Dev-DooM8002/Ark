@@ -1,4 +1,4 @@
-#include "../include/Generator.h"
+#include "Emitter.h"
 #include <iostream>
 
 void Generator::emit(std::string code) { output << "    " << code << "\n"; }
@@ -10,8 +10,10 @@ std::string Generator::inferType(std::shared_ptr<Expression> expr) {
     if (std::dynamic_pointer_cast<NumberLiteral>(expr)) return "int";
     if (auto var = std::dynamic_pointer_cast<VarReference>(expr)) {
         if (localVars.count(var->name)) return localVars[var->name].type;
+        if (globalVars.count(var->name)) return globalVars[var->name];
         return "int"; 
     }
+
     if (auto bin = std::dynamic_pointer_cast<BinaryExpr>(expr)) {
         if (bin->op == TokenType::LSHIFT) return "str"; 
         return "int";
@@ -35,7 +37,10 @@ void Generator::collectStrings(std::shared_ptr<Statement> stmt) {
 }
 
 void Generator::collectStringsFromExpr(std::shared_ptr<Expression> expr) {
-    if (auto str = std::dynamic_pointer_cast<StringLiteral>(expr)) { std::string l="msg_"+std::to_string(stringCount++); stringLiterals.push_back({l, str->value}); }
+    if (auto str = std::dynamic_pointer_cast<StringLiteral>(expr)) { 
+        std::string l="msg_"+std::to_string(stringCount++); 
+        stringLiterals.push_back({l, str->value}); 
+    }
     else if (auto bin = std::dynamic_pointer_cast<BinaryExpr>(expr)) { collectStringsFromExpr(bin->left); collectStringsFromExpr(bin->right); }
 }
 
@@ -44,15 +49,36 @@ std::string Generator::generate() {
     stringCount = 0;
     
     output << "default rel\nsection .bss\n    input_buffer resb 64\n    heap_memory resb 100000\n\nsection .data\n    heap_ptr dq heap_memory\n"; 
+
     for (auto stmt : prog->dataSection) {
         if (auto varDecl = std::dynamic_pointer_cast<VarDeclaration>(stmt)) {
-            int initVal = 0; if (auto num = std::dynamic_pointer_cast<NumberLiteral>(varDecl->initValue)) initVal = num->value;
-            output << varDecl->name << ": dq " << initVal << "\n"; 
+            if (auto num = std::dynamic_pointer_cast<NumberLiteral>(varDecl->initValue)) {
+                output << varDecl->name << ": dq " << num->value << "\n"; 
+                globalVars[varDecl->name] = "int";
+            } else if (auto str = std::dynamic_pointer_cast<StringLiteral>(varDecl->initValue)) {
+                std::string label = "gstr_" + varDecl->name;
+                stringLiterals.push_back({label, str->value});
+                output << varDecl->name << ": dq " << label << "\n";
+                globalVars[varDecl->name] = "str";
+            } else {
+                output << varDecl->name << ": dq 0\n";
+                globalVars[varDecl->name] = "int";
+            }
         }
     }
+
     for (auto& [label, value] : stringLiterals) output << label << ": db \"" << value << "\", 0\n";
 
-    output << "\nsection .text\nglobal _start\n\n_start:\n";
+    output << "\nsection .text\nglobal _start\n";
+
+    for (auto stmt : prog->boxSection) {
+        if (auto func = std::dynamic_pointer_cast<FunctionDef>(stmt)) {
+            genFunctionDef(func);
+        }
+    }
+
+    output << "\n_start:\n";
+
     emit("mov rbp, rsp");
     for (auto stmt : prog->startSection) genStatement(stmt);
     emit("mov rax, 60"); emit("xor rdi, rdi"); emit("syscall");
@@ -103,18 +129,20 @@ void Generator::genStatement(std::shared_ptr<Statement> stmt) {
         if (t == "str") emit("call print_string_inline"); else emit("call print_int"); 
     }
     else if (auto inp = std::dynamic_pointer_cast<InputStatement>(stmt)) {
-        if (!inp->prompt.empty()) { std::string l="msg_"+std::to_string(stringCount++); emit("mov rax, "+l); emit("call print_string_inline"); }
+        if (!inp->prompt.empty()) { 
+            std::string l="msg_"+std::to_string(stringCount++); 
+            emit("mov rax, "+l); 
+            emit("call print_string_inline"); 
+        }
         emit("call read_input");
         if (localVars.count(inp->varName)) emit("mov [rbp - " + std::to_string(localVars[inp->varName].offset) + "], rax"); 
         else emit("mov [" + inp->varName + "], rax");
-    }
-    else if (auto loop = std::dynamic_pointer_cast<LoopStatement>(stmt)) {
+    } else if (auto loop = std::dynamic_pointer_cast<LoopStatement>(stmt)) {
         int id = labelCounter++; std::string start=".L_start_"+std::to_string(id), end=".L_end_"+std::to_string(id);
         loopStack.push_back({start, end}); output << start << ":\n";
         if(loop->type != LoopType::INFINITE) { genExpression(loop->condition); emit("cmp rax, 1"); if(loop->type==LoopType::WHILE) emit("jne "+end); else emit("je "+end); }
         for(auto s:loop->body->statements) genStatement(s); emit("jmp "+start); output << end << ":\n"; loopStack.pop_back();
-    }
-    else if (std::dynamic_pointer_cast<BreakStatement>(stmt)) emit("jmp "+loopStack.back().second);
+    } else if (std::dynamic_pointer_cast<BreakStatement>(stmt)) emit("jmp "+loopStack.back().second);
     else if (std::dynamic_pointer_cast<JumpStatement>(stmt)) emit("jmp "+loopStack.back().first);
     else if (auto ifs = std::dynamic_pointer_cast<IfStatement>(stmt)) {
         int id = labelCounter++; std::string endL=".L_ifend_"+std::to_string(id), elseL=".L_else_"+std::to_string(id);
@@ -126,6 +154,8 @@ void Generator::genStatement(std::shared_ptr<Statement> stmt) {
             for(auto s:ifs->elifs[i].second->statements) genStatement(s); emit("jmp "+endL);
         }
         output << elseL << ":\n"; if(ifs->elseBlock) for(auto s:ifs->elseBlock->statements) genStatement(s); output << endL << ":\n";
+    } else if (auto exprStmt = std::dynamic_pointer_cast<ExpressionStatement>(stmt)) {
+        genExpression(exprStmt->expression);
     }
 }
 
@@ -136,8 +166,7 @@ void Generator::genExpression(std::shared_ptr<Expression> expr) {
     else if (auto un = std::dynamic_pointer_cast<UnaryExpr>(expr)) {
         genExpression(un->right);
         if (un->op == TokenType::KW_NOT || un->op == TokenType::BANG) emit("xor rax, 1");
-    }
-    else if (auto bin = std::dynamic_pointer_cast<BinaryExpr>(expr)) {
+    } else if (auto bin = std::dynamic_pointer_cast<BinaryExpr>(expr)) {
         if (bin->op == TokenType::LSHIFT) {
             genExpression(bin->left); push("rax");
             genExpression(bin->right); pop("rbx");
@@ -163,5 +192,50 @@ void Generator::genExpression(std::shared_ptr<Expression> expr) {
                 default: setCode="sete";
             } emit(setCode+" al"); emit("movzx rax, al");
         }
+    } else if (auto call = std::dynamic_pointer_cast<FunctionCall>(expr)) genFunctionCall(call); 
+}
+
+void Generator::genFunctionDef(std::shared_ptr<FunctionDef> func) {
+    currentFuncArgs.clear();
+    stackOffset = 0;
+    localVars.clear();
+
+    output << "\n_fn_" << func->name << ":\n";
+    emit("push rbp");
+    emit("mov rbp, rsp");
+
+    std::vector<std::string> argRegs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
+    for (size_t i = 0; i < func->params.size() && i < 6; i++) {
+        push(argRegs[i]);
+        localVars[func->params[i]] = {stackOffset, "int"};
     }
+
+    for (auto stmt : func->body->statements) {
+        genStatement(stmt);
+    }
+
+    if (func->returnValue) {
+        genExpression(func->returnValue);
+    } else {
+        emit("xor rax, rax");
+    }
+
+    emit("mov rsp, rbp");
+    emit("pop rbp");
+    emit("ret");
+}
+
+void Generator::genFunctionCall(std::shared_ptr<FunctionCall> call) {
+    std::vector<std::string> argRegs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
+    for (size_t i = 0; i < call->arguments.size() && i < 6; i++) {
+        genExpression(call->arguments[i]);
+        push("rax");
+    }
+    for (int i = call->arguments.size() - 1; i >= 0; i--) {
+        if (i < 6) pop(argRegs[i]);
+    }
+
+    emit("call _fn_" + call->callee);
 }

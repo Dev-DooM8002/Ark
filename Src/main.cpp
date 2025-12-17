@@ -6,9 +6,9 @@
 #include <string>
 #include <format>
 #include <unistd.h>
-#include "../include/Lexer.h"
-#include "../include/Parser.h"
-#include "../include/Generator.h"
+#include "Frontend/Lexer/Lexer.h"
+#include "Frontend/Parser/Parser.h"
+#include "Backend/Emitter/Emitter.h"
 
 void rmTmp(std::vector<std::string>& files) {
     for (const std::string& file : files) {

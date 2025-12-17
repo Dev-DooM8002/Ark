@@ -1,4 +1,4 @@
-#include "../include/Parser.h"
+#include "Parser.h"
 #include <iostream>
 #include <algorithm> 
 
@@ -12,11 +12,22 @@ std::shared_ptr<Program> Parser::parseProgram() {
     auto prog = std::make_shared<Program>();
     while (peek().type != TokenType::EOF_TOKEN) {
         if (match(TokenType::SEC_DATA)) parseDataSection(prog);
+        else if (match(TokenType::SEC_BOX)) parseBoxSection(prog);
         else if (match(TokenType::SEC_START)) parseStartSection(prog);
-        else if (match(TokenType::SEC_END)) break; else advance();
+        else if (match(TokenType::SEC_END)) break; 
+        else advance();
     } return prog;
 }
 void Parser::parseDataSection(std::shared_ptr<Program> prog) { while (!check(TokenType::SEC_START) && !check(TokenType::EOF_TOKEN)) prog->dataSection.push_back(statement()); }
+
+void Parser::parseBoxSection(std::shared_ptr<Program> prog) {
+    while (!check(TokenType::SEC_START) && !check(TokenType::SEC_DATA) && !check(TokenType::EOF_TOKEN)) {
+        if (match(TokenType::KW_FN)) {
+            prog->boxSection.push_back(functionDefinition());
+        } else { advance(); }
+    }
+}
+
 void Parser::parseStartSection(std::shared_ptr<Program> prog) { while (!check(TokenType::SEC_END) && !check(TokenType::EOF_TOKEN)) prog->startSection.push_back(statement()); match(TokenType::SEC_END); }
 std::shared_ptr<Block> Parser::parseBlock(const std::vector<TokenType>& terminators) {
     auto block = std::make_shared<Block>();
@@ -45,25 +56,105 @@ std::shared_ptr<Statement> Parser::statement() {
         if (match(TokenType::KW_ELSE)) { consume(TokenType::COLON,":"); ifs->elseBlock = parseBlock({TokenType::SEC_END}); }
         consume(TokenType::SEC_END, ".end"); return ifs;
     }
-    if (match(TokenType::KW_VAR)) return varDeclaration();
+    if (match(TokenType::KW_VAR) || check(TokenType::TYPE_INT) || check(TokenType::TYPE_STR)) {
+        return varDeclaration();
+    }
     return assignmentOrExpression();
 }
 
 std::shared_ptr<Statement> Parser::varDeclaration() {
-    bool g = match(TokenType::KW_GLOBAL); match(TokenType::KW_LOCAL); 
-    
-    // CAPTURAR TIPO EXPLICITO (Si existe)
     std::string typeStr = "";
     if (peek().type == TokenType::TYPE_INT) { typeStr = "int"; advance(); }
     else if (peek().type == TokenType::TYPE_STR) { typeStr = "str"; advance(); }
     
-    Token n = consume(TokenType::ID, "ID"); consume(TokenType::COLON, ":"); auto i = expression(); match(TokenType::SEMICOLON);
-    return std::make_shared<VarDeclaration>(n.value, typeStr, g, i);
+    Token n = consume(TokenType::ID, "ID");
+
+    declaredVariables.insert(n.value);
+
+    std::shared_ptr<Expression> initVal;
+
+    if (match(TokenType::COLON)) {
+        initVal = expression();
+    } else {
+        if (typeStr == "str") {
+            initVal = std::make_shared<StringLiteral>("");
+        } else {
+            if (typeStr.empty()) typeStr = "int";
+            initVal = std::make_shared<NumberLiteral>(0);
+        }
+    }
+    
+    match(TokenType::SEMICOLON);
+    return std::make_shared<VarDeclaration>(n.value, typeStr, false, initVal);
 }
 
 std::shared_ptr<Statement> Parser::assignmentOrExpression() {
-    if (peek().type == TokenType::ID && peek(1).type == TokenType::COLON) { std::string n = advance().value; advance(); auto v = expression(); match(TokenType::SEMICOLON); return std::make_shared<Assignment>(n, v); }
-    auto e = expression(); match(TokenType::SEMICOLON); return std::make_shared<ExpressionStatement>(e);
+    if (peek().type == TokenType::ID && peek(1).type == TokenType::COLON) {
+        std::string name = peek().value;
+        
+        if (declaredVariables.count(name)) {
+            advance(); advance();
+            auto v = expression();
+            match(TokenType::SEMICOLON);
+            return std::make_shared<Assignment>(name, v);
+        } else {
+            declaredVariables.insert(name);
+            advance(); advance();
+            auto v = expression();
+            match(TokenType::SEMICOLON);
+            return std::make_shared<VarDeclaration>(name, "", false, v);
+        }
+    }
+    auto e = expression();
+    match(TokenType::SEMICOLON);
+    return std::make_shared<ExpressionStatement>(e);
+}
+
+std::shared_ptr<Statement> Parser::functionDefinition() {
+    Token nameToken = consume(TokenType::ID, "Se esperaba nombre de funcion");
+    
+    consume(TokenType::LPAREN, "Se esperaba '('  despues del nombre.");
+    std::vector<std::string> params;
+    if (!check(TokenType::RPAREN)) {
+        do {
+            Token param = consume(TokenType::ID, "Se estepraba nombre de parametro");
+            params.push_back(param.value);
+        } while (match(TokenType::COMMA));
+    }
+    consume(TokenType::RPAREN, "Se esperaba ')' despues de parametros");
+
+    std::string retType = "void";
+    if (match(TokenType::ARROW)) {
+        if (match(TokenType::TYPE_INT)) retType = "int";
+        else if (match(TokenType::TYPE_STR)) retType = "str";
+        else retType = "void";
+    }
+    consume(TokenType::COLON, "Se esperaba ':' antes del cuerpo");
+    std::vector<TokenType> terminators = {
+        TokenType::SEC_END,
+        TokenType::SEC_START,
+        TokenType::SEC_DATA,
+        TokenType::SEC_BOX,
+        TokenType::KW_FN
+    };
+
+    auto body = parseBlock(terminators);
+    
+    std::shared_ptr<Expression> retValue = nullptr;
+
+    if (match(TokenType::SEC_END)) {
+        if (match(TokenType::LPAREN)) {
+            retValue = expression();
+            consume(TokenType::RPAREN, "Se esperaba ')' despues del valor de retorno");
+        }
+    } else if (!body->statements.empty()) {
+        auto lastStmt = body->statements.back();
+        if (auto exprStmt = std::dynamic_pointer_cast<ExpressionStatement>(lastStmt)) {
+            retValue = exprStmt->expression;
+        }
+    }
+
+    return std::make_shared<FunctionDef>(nameToken.value, params, retType, body, retValue);
 }
 
 // JERARQUIA PEMDAS
@@ -79,7 +170,23 @@ std::shared_ptr<Expression> Parser::unary() { if (match(TokenType::BANG) || matc
 std::shared_ptr<Expression> Parser::primary() {
     if (match(TokenType::LIT_INT)) return std::make_shared<NumberLiteral>(std::stoi(peek(-1).value));
     if (match(TokenType::LIT_STR)) return std::make_shared<StringLiteral>(peek(-1).value);
-    if (match(TokenType::ID)) return std::make_shared<VarReference>(peek(-1).value);
+    
+    if (match(TokenType::ID)) {
+        std::string name = peek(-1).value;
+
+        if (match(TokenType::LPAREN)) {
+            std::vector<std::shared_ptr<Expression>> args;
+            if (!check(TokenType::RPAREN)) {
+                do {
+                    args.push_back(expression());
+                } while (match(TokenType::COMMA));
+            }
+            consume(TokenType::RPAREN, "Se esperaba ')' despues de argumentos");
+            return std::make_shared<FunctionCall>(name,args);
+        }
+        return std::make_shared<VarReference>(name);
+    }
+    
     if (match(TokenType::LPAREN)) { auto e = expression(); consume(TokenType::RPAREN, ")"); return e; }
     std::cerr << "Unexpected: " << peek().value << std::endl; exit(1);
 }

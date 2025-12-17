@@ -1,5 +1,5 @@
 #pragma once
-#include "AST.h"
+#include "../../../Includes/AST.h"
 #include <sstream>
 #include <map>
 #include <vector>
@@ -22,6 +22,7 @@ private:
     
     // Mapa actualizado: Nombre -> Info (Offset + Tipo)
     std::map<std::string, VarInfo> localVars;
+    std::map<std::string, std::string> globalVars;
     
     int stackOffset = 0; 
     int stringCount = 0;
@@ -40,6 +41,10 @@ private:
     void genStatement(std::shared_ptr<Statement> stmt);
     void genExpression(std::shared_ptr<Expression> expr);
 
+    void genFunctionDef(std::shared_ptr<FunctionDef> funct);
+    void genFunctionCall(std::shared_ptr<FunctionCall> call);
+
     // NUEVO: El cerebro que adivina tipos
     std::string inferType(std::shared_ptr<Expression> expr);
+    std::map<std::string, int> currentFuncArgs;
 };

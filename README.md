@@ -87,7 +87,7 @@ El compilador genera:
 ```
 **Comentario Multi-Line:**
 ```ark
-<begin>
+<comment>
     Este
     Es un
     Comentario

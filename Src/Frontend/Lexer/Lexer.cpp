@@ -1,4 +1,4 @@
-#include "../include/Lexer.h"
+#include "Lexer.h"
 #include <cctype>
 #include <iostream>
 #include <map>
@@ -32,7 +32,7 @@ std::vector<Token> Lexer::tokenize() {
         if (isspace(c)) { advance(); continue; }
         if (c == '/' && peek(1) == '/') { while (peek() != '\n' && !isAtEnd()) advance(); continue; }
         // Bloques begin/end
-        if (c == '<' && src.substr(pos, 7) == "<begin>") { 
+        if (c == '<' && src.substr(pos, 8) == "<comment>") { 
             for(int i=0;i<7;i++) advance(); 
             while(!isAtEnd()){ if(peek()=='<' && src.substr(pos,5)=="<end>"){ for(int i=0;i<5;i++) advance(); break;} advance(); } 
             continue; 
@@ -40,8 +40,10 @@ std::vector<Token> Lexer::tokenize() {
         // Secciones
         if (c == '.') { 
             advance(); std::string s=""; while(isalnum(peek())) s+=advance(); 
-            if(s=="data") tokens.push_back(makeToken(TokenType::SEC_DATA,".data")); 
-            else if(s=="start") tokens.push_back(makeToken(TokenType::SEC_START,".start")); 
+            if (peek() == ':') s += advance();
+            if(s=="data:") tokens.push_back(makeToken(TokenType::SEC_DATA,".data:")); 
+            if(s=="box:") tokens.push_back(makeToken(TokenType::SEC_BOX,".box:"));
+            else if(s=="start:") tokens.push_back(makeToken(TokenType::SEC_START,".start:")); 
             else if(s=="end") tokens.push_back(makeToken(TokenType::SEC_END,".end")); 
             continue; 
         }
@@ -62,9 +64,12 @@ std::vector<Token> Lexer::tokenize() {
             
             // Matematicas
             case '+': tokens.push_back(makeToken(TokenType::PLUS, "+")); break;
-            case '-': tokens.push_back(makeToken(TokenType::MINUS, "-")); break;
             case '*': tokens.push_back(makeToken(TokenType::STAR, "*")); break;
             case '/': tokens.push_back(makeToken(TokenType::SLASH, "/")); break;
+            case '-': 
+                if (peek() == '>') { advance(); tokens.push_back(makeToken(TokenType::ARROW, "-<")); }
+                else tokens.push_back(makeToken(TokenType::MINUS, "-")); 
+                break;
 
             // Logica Single Char
             case '&': tokens.push_back(makeToken(TokenType::AMPERSAND, "&")); break;
@@ -104,15 +109,14 @@ Token Lexer::identifier() {
     while (isalnum(peek()) || peek() == '_') text += advance();
 
     static std::map<std::string, TokenType> keywords = {
-        {"var", TokenType::KW_VAR},
-        {"int", TokenType::TYPE_INT}, {"str", TokenType::TYPE_STR},
-        {"global", TokenType::KW_GLOBAL}, {"if", TokenType::KW_IF},
+        {"var", TokenType::KW_VAR}, {"int", TokenType::TYPE_INT}, 
+        {"str", TokenType::TYPE_STR}, {"if", TokenType::KW_IF},
         {"elif", TokenType::KW_ELIF}, {"else", TokenType::KW_ELSE},
         {"loop", TokenType::KW_LOOP}, {"uloop", TokenType::KW_ULOOP},
         {"break", TokenType::KW_BREAK}, {"jump", TokenType::KW_JUMP},
         {"pil", TokenType::KW_PIL}, {"cin", TokenType::KW_CIN},
-        // Nuevos
-        {"and", TokenType::KW_AND}, {"or", TokenType::KW_OR}, {"not", TokenType::KW_NOT}
+        {"and", TokenType::KW_AND}, {"or", TokenType::KW_OR}, 
+        {"not", TokenType::KW_NOT}, {"fn", TokenType::KW_FN},
     };
 
     if (keywords.count(text)) return makeToken(keywords[text], text);

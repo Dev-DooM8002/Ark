@@ -57,7 +57,27 @@ struct ExpressionStatement : public Statement {
     std::shared_ptr<Expression> expression; ExpressionStatement(std::shared_ptr<Expression> e) : expression(e) {}
 };
 
+struct FunctionDef : public Statement {
+    std::string name;
+    std::vector<std::string> params;
+    std::string returnType;
+    std::shared_ptr<Block> body;
+    std::shared_ptr<Expression> returnValue;
+
+    FunctionDef(std::string n, std::vector<std::string> p, std::string rt, std::shared_ptr<Block> b, std::shared_ptr<Expression> ret)
+        : name(n), params(p), returnType(rt), body(b), returnValue(ret) {}
+};
+
+struct FunctionCall : public Expression {
+    std::string callee;
+    std::vector<std::shared_ptr<Expression>> arguments;
+
+    FunctionCall(std::string c, std::vector<std::shared_ptr<Expression>> args)
+        : callee(c), arguments(args) {}
+};
+
 struct Program : public ASTNode {
     std::vector<std::shared_ptr<Statement>> dataSection;
+    std::vector<std::shared_ptr<Statement>> boxSection;
     std::vector<std::shared_ptr<Statement>> startSection;
 };
