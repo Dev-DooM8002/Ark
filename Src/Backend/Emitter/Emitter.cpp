@@ -42,9 +42,6 @@ void Generator::collectStrings(std::shared_ptr<Statement> stmt) {
         if (decl->initValue) {
             collectStringsFromExpr(decl->initValue);
         } else if (decl->type == "str") {
-            // CORRECCIÓN AQUI:
-            // Si declaramos un 'str' sin valor, necesitamos registrar su etiqueta vacía
-            // para que coincida con lo que generará genStatement después.
             std::string l = "empty_str_" + std::to_string(stringCount++);
             stringLiterals.push_back({l, ""});
         }
@@ -76,11 +73,38 @@ void Generator::collectStringsFromExpr(std::shared_ptr<Expression> expr) {
     }
 }
 
+// --- SCANNING PARA STACK FRAME ---
+
+void Generator::scanBlockForVars(std::shared_ptr<Block> block) {
+    if (!block) return;
+    for (auto stmt : block->statements) {
+        scanStatementForVars(stmt);
+    }
+}
+
+void Generator::scanStatementForVars(std::shared_ptr<Statement> stmt) {
+    if (auto decl = std::dynamic_pointer_cast<VarDeclaration>(stmt)) {
+        if (localVars.find(decl->name) == localVars.end()) {
+            stackOffset += 8;
+            std::string type = decl->type.empty() ? "int" : decl->type; 
+            localVars[decl->name] = {stackOffset, type};
+        }
+    }
+    else if (auto ifStmt = std::dynamic_pointer_cast<IfStatement>(stmt)) {
+        scanBlockForVars(ifStmt->thenBlock);
+        for (auto& elif : ifStmt->elifs) scanBlockForVars(elif.second);
+        if (ifStmt->elseBlock) scanBlockForVars(ifStmt->elseBlock);
+    }
+    else if (auto loop = std::dynamic_pointer_cast<LoopStatement>(stmt)) {
+        scanBlockForVars(loop->body);
+    }
+}
+
 std::string Generator::generate() {
     for (auto stmt : prog->startSection) collectStrings(stmt);
     stringCount = 0;
     
-    output << "default rel\nsection .bss\n    input_buffer resb 64\n    heap_memory resb 100000\n\nsection .data\n    heap_ptr dq heap_memory\n"; 
+    output << "default rel\nsection .bss\n    input_buffer resb 64\n    current_break dq 0\n\nsection .data\n"; 
 
     for (auto stmt : prog->dataSection) {
         if (auto varDecl = std::dynamic_pointer_cast<VarDeclaration>(stmt)) {
@@ -118,8 +142,10 @@ std::string Generator::generate() {
     emit("push rbp");
     emit("mov rbp, rsp");
 
-    // NOTA: Se eliminó la reserva estática (sub rsp) para permitir que los push
-    // en genStatement manejen la memoria dinámicamente.
+    emit("mov rax, 12");        
+    emit("xor rdi, rdi");       
+    emit("syscall");
+    emit("mov [current_break], rax"); 
 
     for (auto stmt : prog->startSection) genStatement(stmt);
 
@@ -129,18 +155,53 @@ std::string Generator::generate() {
     emit("xor rdi, rdi"); 
     emit("syscall");
 
+    output << "\nark_malloc:\n";
+    output << "    push rbp\n    mov rbp, rsp\n";
+    output << "    push rbx\n";             
+    output << "    mov rbx, rdi\n";         
+    output << "    mov rax, 12\n";          
+    output << "    mov rdi, [current_break]\n"; 
+    output << "    add rdi, rbx\n";         
+    output << "    syscall\n";              
+    output << "    mov rdx, [current_break]\n"; 
+    output << "    mov [current_break], rax\n"; 
+    output << "    mov rax, rdx\n";         
+    output << "    pop rbx\n";
+    output << "    leave\n    ret\n";
+
+    output << "\nark_free:\n";
+    output << "    ret\n"; 
+
     output << "\nstring_concat:\n";
     output << "    push rbp\n    mov rbp, rsp\n";
-    output << "    push rdi\n    push rsi\n    push rbx\n    push rcx\n    push r8\n    push r9\n";
-    output << "    mov rdi, [heap_ptr]\n";
-    output << "    mov rsi, r8\n";
-    output << ".copy_a:\n    cmp byte [rsi], 0\n    je .done_a\n    mov al, [rsi]\n    mov [rdi], al\n    inc rsi\n    inc rdi\n    jmp .copy_a\n.done_a:\n";
-    output << "    mov rsi, r9\n";
-    output << ".copy_b:\n    cmp byte [rsi], 0\n    je .done_b\n    mov al, [rsi]\n    mov [rdi], al\n    inc rsi\n    inc rdi\n    jmp .copy_b\n.done_b:\n";
-    output << "    mov byte [rdi], 0\n    inc rdi\n";
-    output << "    mov rax, [heap_ptr]\n";
-    output << "    mov [heap_ptr], rdi\n";
-    output << "    pop r9\n    pop r8\n    pop rcx\n    pop rbx\n    pop rsi\n    pop rdi\n";
+    output << "    push rbx\n    push r12\n    push r13\n    push r14\n"; 
+    
+    output << "    mov rdi, r8\n";
+    output << "    xor rcx, rcx\n";
+    output << ".len_a:\n    cmp byte [rdi], 0\n    je .calc_b\n    inc rdi\n    inc rcx\n    jmp .len_a\n";
+
+    output << ".calc_b:\n    mov r12, rcx\n"; 
+    output << "    mov rdi, r9\n";
+    output << "    xor rcx, rcx\n";
+    output << ".len_b:\n    cmp byte [rdi], 0\n    je .alloc\n    inc rdi\n    inc rcx\n    jmp .len_b\n";
+
+    output << ".alloc:\n    mov r13, rcx\n"; 
+    output << "    mov rdi, r12\n";
+    output << "    add rdi, r13\n";
+    output << "    inc rdi\n";      
+    output << "    call ark_malloc\n"; 
+    output << "    mov r14, rax\n"; 
+
+    output << "    mov rsi, r8\n";  
+    output << "    mov rdi, r14\n"; 
+    output << ".copy_a_loop:\n    cmp byte [rsi], 0\n    je .copy_b_setup\n    mov al, [rsi]\n    mov [rdi], al\n    inc rsi\n    inc rdi\n    jmp .copy_a_loop\n";
+
+    output << ".copy_b_setup:\n    mov rsi, r9\n"; 
+    output << ".copy_b_loop:\n    cmp byte [rsi], 0\n    je .finish\n    mov al, [rsi]\n    mov [rdi], al\n    inc rsi\n    inc rdi\n    jmp .copy_b_loop\n";
+
+    output << ".finish:\n    mov byte [rdi], 0\n";
+    output << "    mov rax, r14\n";
+    output << "    pop r14\n    pop r13\n    pop r12\n    pop rbx\n";
     output << "    leave\n    ret\n";
 
     output << "\nprint_string_inline:\n    push rbp\n    mov rbp, rsp\n    push rbx\n    mov rbx, rax\n.loop_len:\n    cmp byte [rax], 0\n    je .print\n    inc rax\n    jmp .loop_len\n.print:\n    sub rax, rbx\n    mov rdx, rax\n    mov rsi, rbx\n    mov rax, 1\n    mov rdi, 1\n    syscall\n    pop rbx\n    leave\n    ret\n";
@@ -161,8 +222,6 @@ void Generator::genStatement(std::shared_ptr<Statement> stmt) {
         } else {
             if (type == "str") {
                 std::string emptyLabel = "empty_str_" + std::to_string(stringCount++);
-                // OJO: Aquí no agregamos a stringLiterals porque ya lo hicimos en collectStrings
-                // y la sección .data YA fue generada.
                 emit("mov rax, " + emptyLabel);
             } else {
                 if (type.empty()) type = "int";
@@ -170,9 +229,15 @@ void Generator::genStatement(std::shared_ptr<Statement> stmt) {
             }
         }
         
-        emit("push rax");
-        stackOffset += 8;
-        localVars[decl->name] = {stackOffset, type};
+        // CORRECCION: Usar espacio reservado (No Push)
+        if (localVars.count(decl->name)) {
+            // Actualizar tipo si fue inferido ahora
+            localVars[decl->name].type = type; 
+            emit("mov [rbp - " + std::to_string(localVars[decl->name].offset) + "], rax");
+        } else {
+            // Fallback para globales o errores
+            emit("mov [" + decl->name + "], rax");
+        }
     } 
     else if (auto assign = std::dynamic_pointer_cast<Assignment>(stmt)) {
         genExpression(assign->value); 
@@ -328,11 +393,9 @@ void Generator::genExpression(std::shared_ptr<Expression> expr) {
 
 void Generator::genFunctionDef(std::shared_ptr<FunctionDef> func) {
     currentFuncArgs.clear();
-    int savedStackOffset = stackOffset;
-    int savedTempDepth = tempStackDepth;
+    localVars.clear();
     stackOffset = 0;
     tempStackDepth = 0;
-    localVars.clear();
 
     output << "\n_fn_" << func->name << ":\n";
     emit("push rbp");
@@ -340,20 +403,33 @@ void Generator::genFunctionDef(std::shared_ptr<FunctionDef> func) {
 
     std::vector<std::string> argRegs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
-    // Primeros 6 argumentos desde registros
-    for (size_t i = 0; i < func->params.size() && i < 6; i++) {
-        push(argRegs[i]);
+    // 1. Calcular offsets para argumentos
+    for (size_t i = 0; i < func->params.size(); i++) {
         stackOffset += 8;
         localVars[func->params[i]] = {stackOffset, "int"};
     }
 
-    // Argumentos 7+ desde el stack del caller
-    for (size_t i = 6; i < func->params.size(); i++) {
-        int callerOffset = 16 + (i - 6) * 8;
-        emit("mov rax, [rbp + " + std::to_string(callerOffset) + "]");
-        push("rax");
-        stackOffset += 8;
-        localVars[func->params[i]] = {stackOffset, "int"};
+    // 2. Calcular variables locales (pre-scan)
+    scanBlockForVars(func->body);
+
+    // 3. Alinear stack a 16 bytes
+    if (stackOffset % 16 != 0) stackOffset += 8;
+
+    // 4. Reservar espacio de una sola vez
+    if (stackOffset > 0) {
+        emit("sub rsp, " + std::to_string(stackOffset));
+    }
+
+    // 5. Mover argumentos a sus slots de memoria
+    for (size_t i = 0; i < func->params.size(); i++) {
+        std::string offset = std::to_string(localVars[func->params[i]].offset);
+        if (i < 6) {
+            emit("mov [rbp - " + offset + "], " + argRegs[i]);
+        } else {
+            int callerOffset = 16 + (i - 6) * 8;
+            emit("mov rax, [rbp + " + std::to_string(callerOffset) + "]");
+            emit("mov [rbp - " + offset + "], rax");
+        }
     }
 
     for (auto stmt : func->body->statements) {
@@ -366,24 +442,18 @@ void Generator::genFunctionDef(std::shared_ptr<FunctionDef> func) {
         emit("xor rax, rax");
     }
 
-    emit("mov rsp, rbp");
-    emit("pop rbp");
+    emit("leave");
     emit("ret");
-    
-    stackOffset = savedStackOffset;
-    tempStackDepth = savedTempDepth;
 }
 
 void Generator::genFunctionCall(std::shared_ptr<FunctionCall> call) {
     std::vector<std::string> argRegs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
 
-    // Evaluar todos los argumentos y pushearlos
     for (auto& arg : call->arguments) {
         genExpression(arg);
         push("rax");
     }
 
-    // Popear primeros 6 a registros
     size_t regArgs = std::min(call->arguments.size(), (size_t)6);
     for (int i = regArgs - 1; i >= 0; i--) {
         pop(argRegs[i]);
@@ -391,7 +461,6 @@ void Generator::genFunctionCall(std::shared_ptr<FunctionCall> call) {
 
     emit("call _fn_" + call->callee);
 
-    // Limpiar argumentos extra del stack
     if (call->arguments.size() > 6) {
         int extraArgs = call->arguments.size() - 6;
         emit("add rsp, " + std::to_string(extraArgs * 8));

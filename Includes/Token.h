@@ -43,6 +43,8 @@ struct Token {
     TokenType type;
     std::string value;
     int line;
+    int column;
+    int length;
 };
 
 inline std::string tokenTypeToString(TokenType type) {

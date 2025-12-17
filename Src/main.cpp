@@ -6,8 +6,10 @@
 #include <string>
 #include <format>
 #include <unistd.h>
+#include "../Includes/ErrorReporter.h"
 #include "Frontend/Lexer/Lexer.h"
 #include "Frontend/Parser/Parser.h"
+#include "Frontend/Semantic/Semantic.h"
 #include "Backend/Emitter/Emitter.h"
 
 void rmTmp(std::vector<std::string>& files) {
@@ -60,12 +62,27 @@ int main(int argc, char* argv[]) {
     buffer << file.rdbuf();
     std::string source = buffer.str();
 
+    ErrorReporter ErrorReporter(source);
+
     // 2. Compilacion (ark -> ASM)
     try {
         Lexer lexer(source);
         std::vector<Token> tokens = lexer.tokenize();
-        Parser parser(tokens);
+
+        Parser parser(tokens, ErrorReporter);
         auto prog = parser.parseProgram();
+
+        if (ErrorReporter.hasFoundError()) return 1;
+
+        std::cout << "[Ark] Anilizando Semantica..." << std::endl;
+        SemanticAnalyzer semantic(ErrorReporter);
+        semantic.analyze(prog);
+        
+        if (ErrorReporter.hasFoundError()) {
+            std::cout << "[Ark] Fallo analisis semantico." << std::endl;
+            return 1;
+        }
+
         Generator generator(prog);
         std::string asmCode = generator.generate();
 
@@ -96,11 +113,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         std::cout << "[Ark] EXITO: Ejecutable: ./" << outputExe << std::endl;
-    } catch (const std::exception e) {
-        std::cerr << "[Ark] Error de compilacion: " << e.what() << std::endl;
-        rmTmp(tempFiles);
-        return 1;
-    }
+    } catch (const std::exception e) { return 1; }
 
     rmTmp(tempFiles);
     return 0;

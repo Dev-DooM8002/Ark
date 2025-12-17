@@ -3,22 +3,26 @@
 #include <memory>
 #include <set>
 #include "../../../Includes/Token.h"
+#include "../../../Includes/ErrorReporter.h"
 #include "../../../Includes/AST.h"
 
 class Parser {
 public:
-    Parser(const std::vector<Token>& tokens) : tokens(tokens) {
+    Parser(const std::vector<Token>& tokens, ErrorReporter& reporter) : tokens(tokens), reporter(reporter) {
         pos = 0;
     }
 
     std::shared_ptr<Program> parseProgram();
 
 private:
+    ErrorReporter& reporter;
+
     std::vector<Token> tokens;
     size_t pos;
 
     // utilidades
     Token peek(int offset = 0) const;
+    Token previous() const;
     Token advance();
     bool match(TokenType type);
     bool check(TokenType type); 

@@ -11,7 +11,12 @@ char Lexer::peek(int offset) const {
 char Lexer::advance() {
     char current = src[pos];
     pos++;
-    if (current == '\n') line++;
+    if (current == '\n') {
+        line++;
+        column = 1;
+    } else {
+        column++;
+    }
     return current;
 }
 
@@ -20,17 +25,27 @@ bool Lexer::isAtEnd() const {
 }
 
 Token Lexer::makeToken(TokenType type, std::string value) {
-    return {type, value, line};
+    int len = column - startColumn;
+    return {type, value, line, startColumn, len};
 }
 
 std::vector<Token> Lexer::tokenize() {
     std::vector<Token> tokens;
 
     while (!isAtEnd()) {
+        startColumn = column;
         char c = peek();
 
-        if (isspace(c)) { advance(); continue; }
-        if (c == '/' && peek(1) == '/') { while (peek() != '\n' && !isAtEnd()) advance(); continue; }
+        if (isspace(c)) { 
+            advance(); 
+            continue; 
+        }
+        if (c == '/' && peek(1) == '/') { 
+            while (peek() != '\n' && !isAtEnd()) {
+                advance();
+                continue; 
+            }
+        }
         // Bloques begin/end
         if (c == '<' && src.substr(pos, 8) == "<comment>") { 
             for(int i=0;i<7;i++) advance(); 
@@ -100,7 +115,7 @@ std::vector<Token> Lexer::tokenize() {
             default: break;
         }
     }
-    tokens.push_back(makeToken(TokenType::EOF_TOKEN, "EOF"));
+    tokens.push_back({TokenType::EOF_TOKEN, "EOF", line, column, 0});
     return tokens;
 }
 

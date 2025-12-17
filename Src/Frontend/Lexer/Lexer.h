@@ -16,6 +16,8 @@ private:
     std::string src;
     size_t pos;
     int line;
+    int column = 1;
+    int startColumn = 1;
 
     char peek(int offset = 0) const;
     char advance();

@@ -1,4 +1,10 @@
+.data:
+    f: "hola"
+
+.box:
+    fn sum(r, l): r + l;
+
 .start:
-    str nombre;
-    pnl(nombre);
+    pnl(sum(4,4))
+    pnl(f)
 .end

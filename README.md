@@ -5,7 +5,7 @@
 ---
 
 ## Vision y Filosofia
-* **Sintaxis Limpia:** Bloques definidos por identacion o estructura logica, sin abuso de llaves `{}` ni punto y coma obligatorios en cada respiro.
+* **Sintaxis Limpia:** Bloques delimitados por palabra clave `end`, con identacion estetica **opcional**, sin abuso de llaves `{}` ni punto y coma obligatorios en cada respiro.
 * **Performance Real:** Compila directamente a codigo maquina nativo (ELF64), sin maquinas virtuales ni interpretes intermedios.
 * **Low Level Power:** Acceso directo a registros y memoria (eventualmente), pero con abstracciones comodas para el dia a dia.
 

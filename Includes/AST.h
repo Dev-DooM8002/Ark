@@ -4,7 +4,10 @@
 #include <memory>
 #include "Token.h"
 
-struct ASTNode { virtual ~ASTNode() = default; };
+struct ASTNode {
+    int line = 0;
+    virtual ~ASTNode() = default; 
+};
 struct Expression : public ASTNode {};
 struct Statement : public ASTNode {};
 
