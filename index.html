@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ark Programming Language</title>
+    <meta name="description" content="Ark is a modern compiled programming language focused on simplicity, native performance and clean syntax.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="cursor-glow"></div>
+    
+    <canvas id="particles-canvas"></canvas>
+
+    <header>
+        <nav class="navbar">
+            <div class="logo">
+                <svg viewBox="0 0 100 100" class="ark-logo">
+                    <path d="M50 10 L10 90 L30 90 L50 50 L70 90 L90 90 Z" />
+                </svg>
+                ARK
+            </div>
+            <ul class="nav-links">
+                <li><a href="#about">Acerca</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#pipeline">Pipeline</a></li>
+                <li>
+                    <button id="theme-toggle" aria-label="Cambiar tema">
+                        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                        <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    </button>
+                </li>
+            </ul>
+            <div class="nav-right">
+                <a class="github-btn" href="https://github.com/Dev-DooM8002/Ark" target="_blank">GitHub</a>
+                <button class="hamburger" id="hamburger">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="hero-left">
+            <div class="tag glass">⚡ C++ Power • Native NASM • Clean Syntax</div>
+            <h1>Build Native.<br><span class="gradient-text">Think Simple.</span></h1>
+            <p>Ark es un lenguaje compilado moderno diseñado para alto rendimiento, ejecutables nativos y una experiencia de desarrollo fluida. Sin máquinas virtuales.</p>
+            
+            <div class="github-stats glass" id="gh-stats">
+                <div class="stat"><span id="gh-stars">--</span> ⭐ Stars</div>
+                <div class="stat"><span id="gh-forks">--</span> 🍴 Forks</div>
+            </div>
+        </div>
+
+        <div class="hero-right">
+            <div class="playground glass">
+                <div class="window-header">
+                    <div class="dots"><span></span><span></span><span></span></div>
+                    <div class="title">main.ark</div>
+                    <button id="run-btn" class="run-btn">▶ Run</button>
+                </div>
+                <div class="editor-container">
+                    <textarea id="code-editor" spellcheck="false">.data:
+    var lang: "Ark";
+
+.start:
+    pnl("Construyendo " << lang << "...");
+.end</textarea>
+                    <pre aria-hidden="true"><code id="code-highlight"></code></pre>
+                </div>
+                <div class="terminal-container">
+                    <div class="terminal-header">Terminal</div>
+                    <pre id="terminal-output">$ ark main.ark<br><span id="term-cursor">█</span></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="section">
+        <h2 class="section-title">¿Por qué Ark?</h2>
+        <div class="cards">
+            <div class="card glass">
+                <h3>⚡ Nativo (NASM)</h3>
+                <p>Ark compila tu código directamente a ensamblador x86-64 y genera un ejecutable nativo ELF64 super ligero y rápido.</p>
+            </div>
+            <div class="card glass">
+                <h3>🧠 Sintaxis Limpia</h3>
+                <p>Inspirado en los mejores. Sin llaves excesivas ni punto y coma obligatorios. Bloques definidos elegantemente.</p>
+            </div>
+            <div class="card glass">
+                <h3>🏗 Modular</h3>
+                <p>Lexer, Parser (AST), Semantic Analyzer y Emitter separados para facilitar contribuciones y futuras arquitecturas (ARM64).</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="pipeline" class="section">
+        <h2 class="section-title">Compilation Pipeline</h2>
+        <div class="pipeline-container glass">
+            <div class="pipe-node">Source</div>
+            <div class="pipe-line"><div class="flow"></div></div>
+            <div class="pipe-node">Lexer</div>
+            <div class="pipe-line"><div class="flow"></div></div>
+            <div class="pipe-node">Parser</div>
+            <div class="pipe-line"><div class="flow"></div></div>
+            <div class="pipe-node">Semantic</div>
+            <div class="pipe-line"><div class="flow"></div></div>
+            <div class="pipe-node">Emitter</div>
+            <div class="pipe-line"><div class="flow"></div></div>
+            <div class="pipe-node active-node">Executable</div>
+        </div>
+    </section>
+
+    <footer class="glass">
+        <svg viewBox="0 0 100 100" class="ark-logo footer-logo">
+            <path d="M50 10 L10 90 L30 90 L50 50 L70 90 L90 90 Z" />
+        </svg>
+        <h3>Ark Language</h3>
+        <p>Desarrollado con pasión para la comunidad de bajo nivel.</p>
+        <a href="https://github.com/Dev-DooM8002/Ark" target="_blank">Repositorio Oficial</a>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
