@@ -104,7 +104,7 @@ std::string Generator::generate() {
     for (auto stmt : prog->startSection) collectStrings(stmt);
     stringCount = 0;
     
-    output << "default rel\nsection .bss\n    input_buffer resb 64\n    current_break dq 0\n\nsection .data\n"; 
+    output << "default rel\nsection .bss\n    input_buffer resb 64\n    current_break resq 1\n\nsection .data\n"; 
 
     for (auto stmt : prog->dataSection) {
         if (auto varDecl = std::dynamic_pointer_cast<VarDeclaration>(stmt)) {

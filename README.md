@@ -24,7 +24,7 @@ Si estas leyendo esto, ya sabes como funciona un compilador. Ark sigue el flujo 
 
 ### Requisitos
 - **Linux** (x84-64)
-- **g++** (C++17 o superior)
+- **g++** (C++20 o superior)
 - **NASM** (ensamblador)
 - **ld** (linker)
 - **git** (control de versiones)
@@ -51,14 +51,13 @@ rm -rf Ark
 
 ## Uso
 ```bash
-ark file.ark
-./file
+ark file.ark -o/-O outputName
+./output
 ```
 
 El compilador genera:
-1. `output.asm` - codigo NASM
-2. `output.o` - objeto ensamblado
-2. `output` - ejecutable final
+1. `objeto ensamblado` - `codigo NASM`: De manera temporal durante compilacion
+2. `outputName` - ejecutable final
 
 ---
 

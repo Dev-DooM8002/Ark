@@ -1,10 +1,13 @@
 .data:
-    f: "hola"
+    var t: "hola, como estas?? "
+    var n1: 4
+    var n2: 3
 
 .box:
-    fn sum(r, l): r + l;
+    fn suma(a, b): a + b;
+    fn mul(c, d): c * d
 
 .start:
-    pnl(sum(4,4))
-    pnl(f)
-.end
+    pnl(t << "Espero q bien.")
+    pnl(mul(suma(n1, n2), 2))
+.end()
